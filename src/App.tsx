@@ -10,6 +10,7 @@ import {
   Trophy, Calendar, Globe, Menu, Bell, User, Clock, Zap, Eye, TrendingUp
 } from "./icons";
 import { listenEvents, addEvent, removeEvent, updateEvent, FirebaseEvent } from "./firebase";
+const VideoPlayer = React.lazy(() => import("./components/VideoPlayer"));
 
 const HomeTab = React.lazy(() => import("./components/HomeTab"));
 const LiveTVTab = React.lazy(() => import("./components/LiveTVTab"));
@@ -725,6 +726,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
     updateEngineConfig, updateBufferConfig, updateAutoPlayConfig,
     updateAccentColor, handleUpdateM3UText, triggerImportCustomPlaylist,
     selectGridChannel, clearGridSlot, setPickerChannels, updateLanguage,
+    latencyResult,
   };
 
   return (
@@ -958,15 +960,16 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                   <Play className="h-7 w-7 text-white drop-shadow-md pb-0.5" />
                 </div>
                 
-                {/* Embedded synchronized Hls play feed */}
                 <div className="pointer-events-none scale-103 h-full w-full">
-                  <VideoPlayer
-                    channel={selectedChannel}
-                    autoPlay={true}
-                    bufferMode="low"
-                    playerEngine={playerEngine}
-                    language={appLang}
-                  />
+                  <Suspense fallback={<div className="w-full h-full bg-black/50 rounded-2xl" />}>
+                    <VideoPlayer
+                      channel={selectedChannel}
+                      autoPlay={true}
+                      bufferMode="low"
+                      playerEngine={playerEngine}
+                      language={appLang}
+                    />
+                  </Suspense>
                 </div>
               </div>
             </motion.div>

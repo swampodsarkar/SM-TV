@@ -92,6 +92,7 @@ export interface TabProps {
   clearGridSlot: (idx: number) => void;
   setPickerChannels: (v: Channel[] | null) => void;
   updateLanguage: (lang: Language) => void;
+  latencyResult: number | null;
 }
 
 

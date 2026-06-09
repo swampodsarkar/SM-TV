@@ -50,7 +50,7 @@ export default defineConfig(() => {
     },
     build: {
       sourcemap: false,
-      minify: 'terser',
+      minify: 'terser' as const,
       terserOptions: {
         compress: true,
         mangle: true,
