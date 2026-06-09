@@ -164,6 +164,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
   const [adminType, setAdminType] = useState<"cricket" | "football" | "other">("cricket");
   const [adminChannelId, setAdminChannelId] = useState("");
   const [adminChannelIds, setAdminChannelIds] = useState<string[]>([]);
+  const [adminChannelSearch, setAdminChannelSearch] = useState("");
   const [pickerChannels, setPickerChannels] = useState<Channel[] | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
@@ -1488,7 +1489,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                       {editingEventId && (
                         <div className="mb-3 flex items-center gap-2 p-2 bg-cyan-500/5 border border-cyan-500/20 rounded-xl">
                           <span className="text-[10px] text-cyan-400 font-bold flex-1">Editing event — changes will update existing event</span>
-                          <button onClick={() => { setEditingEventId(null); setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); }} className="text-[9px] text-rose-400 font-bold bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-500/20 cursor-pointer">Cancel</button>
+                          <button onClick={() => { setEditingEventId(null); setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); setAdminChannelSearch(""); }} className="text-[9px] text-rose-400 font-bold bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-500/20 cursor-pointer">Cancel</button>
                         </div>
                       )}
 
@@ -1519,8 +1520,9 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                         <div><label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">Start Time</label><input type="datetime-local" value={adminStartTime} onChange={(e) => setAdminStartTime(e.target.value)} className="w-full bg-slate-950 border border-slate-850 p-2.5 text-xs rounded-xl text-slate-200 outline-none focus:border-cyan-500 transition-colors" /></div>
                         <div className="col-span-1 sm:col-span-2">
                           <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1">Channels (select multiple)</label>
+                          <input type="text" placeholder="Search channels..." value={adminChannelSearch} onChange={(e) => setAdminChannelSearch(e.target.value)} className="w-full bg-slate-950 border border-slate-850 p-2 text-xs rounded-xl text-slate-200 outline-none mb-1.5 focus:border-cyan-500 transition-colors" />
                           <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto bg-slate-950 border border-slate-850 p-2 rounded-xl">
-                            {channels.map(c => {
+                            {channels.filter(c => !adminChannelSearch || c.name.toLowerCase().includes(adminChannelSearch.toLowerCase())).map(c => {
                               const sel = adminChannelIds.includes(c.id);
                               return (
                                 <button key={`ac-${c.id}`} onClick={() => setAdminChannelIds(prev => sel ? prev.filter(id => id !== c.id) : [...prev, c.id])}
@@ -1534,7 +1536,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                       </div>
 
                       <div className="flex gap-2 justify-end">
-                        <button onClick={() => { setEditingEventId(null); setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); }} className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-slate-400 text-xs font-bold rounded-xl border border-slate-850 cursor-pointer">Clear</button>
+                          <button onClick={() => { setEditingEventId(null); setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); setAdminChannelSearch(""); }} className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-slate-400 text-xs font-bold rounded-xl border border-slate-850 cursor-pointer">Clear</button>
                         <button onClick={async () => {
                           if (!adminTeam1 || !adminTeam2 || !adminTournament) { triggerToast("Fill all fields!"); return; }
                           const startTs = adminStartTime ? new Date(adminStartTime).getTime() : undefined;
@@ -1549,7 +1551,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                             try { await addEvent(evtData); triggerToast("Published to Firebase!"); } catch { triggerToast("Saved locally"); }
                           }
                           setEditingEventId(null);
-                          setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime("");
+                          setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); setAdminChannelSearch("");
                         }} className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-slate-950 font-black text-xs rounded-xl hover:scale-103 transition-all cursor-pointer border-none">{editingEventId ? "Update Event" : "Publish to Firebase"}</button>
                       </div>
                     </div>
