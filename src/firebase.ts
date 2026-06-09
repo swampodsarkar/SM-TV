@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, push, onValue, remove, get, child } from "firebase/database";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCfwz5irJzMy1UGzVhqb4rmqL4z-jeeJzA",
@@ -14,6 +15,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
+
+// Auto sign-in anonymously for security
+signInAnonymously(auth).catch(() => {});
 
 export interface FirebaseEvent {
   id: string;
@@ -107,4 +112,4 @@ export async function addHistoryEntry(entry: { channelId: string; channelName: s
   await set(newRef, { ...entry, watchedAt: Date.now() });
 }
 
-export { db };
+export { db, auth };

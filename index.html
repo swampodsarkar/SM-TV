@@ -12,16 +12,49 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>SM TV — Live IPTV & Sports Streaming</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: http: blob: data: 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; img-src 'self' https: http: data: blob:; media-src 'self' https: http: blob:; connect-src 'self' https: http: wss:;" />
     <style>
-      body { margin: 0; padding: 0; background: #0a0e1a; }
+      body { margin: 0; padding: 0; background: #0a0e1a; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
       * { -webkit-tap-highlight-color: transparent; }
       input, textarea, button, select { outline: none; }
       ::-webkit-scrollbar { display: none; }
       * { scrollbar-width: none; -ms-overflow-style: none; }
     </style>
   </head>
-  <body>
+  <body ondragstart="return false" ondrop="return false" oncontextmenu="return false">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // DevTools protection
+      (function(){
+        // Block opening DevTools via keyboard
+        document.addEventListener('keydown', function(e){
+          if (
+            e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
+            (e.ctrlKey && e.shiftKey && e.key === 'S' && e.key === 's') ||
+            (e.ctrlKey && e.key === 'U' && e.key === 'u')
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
+        // Block copy/paste
+        document.addEventListener('copy', function(e){ e.preventDefault(); return false; }, true);
+        document.addEventListener('cut', function(e){ e.preventDefault(); return false; }, true);
+        document.addEventListener('paste', function(e){ e.preventDefault(); return false; }, true);
+        document.addEventListener('selectstart', function(e){ e.preventDefault(); return false; }, true);
+        // DevTools detection
+        var element = new Image();
+        Object.defineProperty(element, 'id', {
+          get: function(){ 
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e1a;color:#ef4444;font-size:1.5rem;font-family:sans-serif">DevTools detected. Access denied.</div>';
+            document.title = 'SM TV — Protected';
+          }
+        });
+        setInterval(function(){ console.log(element); console.clear(); }, 1000);
+      })();
+    </script>
   </body>
 </html>

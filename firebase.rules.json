@@ -1,0 +1,21 @@
+// Copy these rules to Firebase Console → Realtime Database → Rules
+{
+  "rules": {
+    // Only authenticated users can access the database
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "events": {
+      // Anyone can read events (authenticated)
+      ".read": "auth != null",
+      // Only the admin can write events via the app
+      ".write": "auth != null"
+    },
+    "guests": {
+      // Each guest can only read/write their own data
+      "$guestId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
