@@ -58,7 +58,7 @@ export default function VideoPlayer({
   const [aspectRatio, setAspectRatio] = useState<"contain" | "cover" | "fill">("contain");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [brightness, setBrightness] = useState(1.0);
-  const [quality, setQuality] = useState<"Auto" | "1080p" | "720p" | "480p" | "360p" | "240p">("Auto");
+  const [quality, setQuality] = useState<"Auto" | "1080p" | "720p" | "480p" | "360p" | "240p">("360p");
   const [isOptimizingQuality, setIsOptimizingQuality] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showCastModal, setShowCastModal] = useState(false);
@@ -193,7 +193,7 @@ export default function VideoPlayer({
     const bufferSizeMB = bufferMode === "low" ? 5 : bufferMode === "high" ? 40 : 20;
     const maxRetryCount = bufferMode === "low" ? 0 : bufferMode === "high" ? 3 : 1;
     if (Hls.isSupported() && playerEngine !== "VLC") {
-      const hls = new Hls({ enableWorker: true, maxBufferSize: bufferSizeMB * 1024 * 1024, lowLatencyMode: bufferMode === "low", manifestLoadingTimeOut: 3000, manifestLoadingMaxRetry: maxRetryCount });
+      const hls = new Hls({ enableWorker: true, maxBufferSize: bufferSizeMB * 1024 * 1024, lowLatencyMode: bufferMode === "low", manifestLoadingTimeOut: 3000, manifestLoadingMaxRetry: maxRetryCount, startLevel: 0 });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
@@ -308,6 +308,13 @@ export default function VideoPlayer({
 
   const handleQualityChange = (selected: typeof quality) => {
     setQuality(selected); setShowQualityMenu(false); setIsOptimizingQuality(true);
+    // Apply level to HLS.js
+    if (hlsRef.current) {
+      const levelMap: Record<string, number> = { "240p": 0, "360p": 1, "480p": 2, "720p": 3, "1080p": 4 };
+      const idx = levelMap[selected];
+      if (selected === "Auto") hlsRef.current.currentLevel = -1;
+      else if (idx !== undefined) hlsRef.current.currentLevel = Math.min(idx, hlsRef.current.levels.length - 1);
+    }
     setTimeout(() => { setIsOptimizingQuality(false); setToastMessage(selected === "Auto" ? t(language, "player.quality.auto") : t(language, "player.quality.changed", { quality: selected })); }, 800);
     setTimeout(() => setToastMessage(null), 2500);
   };

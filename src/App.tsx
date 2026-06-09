@@ -232,7 +232,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
     return () => clearTimeout(t);
   }, []);
 
-  // Ad wall countdown
+  // Ad wall countdown — pauses if app goes background
   useEffect(() => {
     if (!showAdWall) return;
     if (adCountdown <= 0) {
@@ -242,7 +242,9 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
       setPendingChannel(null);
       return;
     }
-    const t = setTimeout(() => setAdCountdown(adCountdown - 1), 1000);
+    const t = setTimeout(() => {
+      if (!document.hidden) setAdCountdown(adCountdown - 1);
+    }, 1000);
     return () => clearTimeout(t);
   }, [showAdWall, adCountdown, pendingChannel]);
 
