@@ -1,0 +1,6 @@
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.firebase.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.firebase.**

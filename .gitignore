@@ -8,3 +8,17 @@ android/build/
 android/app/build/
 android/local.properties
 android/captures/
+
+# Flutter build artifacts
+sports-tv-app-flutter/.dart_tool/
+sports-tv-app-flutter/build/
+sports-tv-app-flutter/android/.gradle/
+sports-tv-app-flutter/android/build/
+sports-tv-app-flutter/android/local.properties
+sports-tv-app-flutter/android/key.properties
+sports-tv-app-flutter/.flutter-plugins
+sports-tv-app-flutter/.flutter-plugins-dependencies
+sports-tv-app-flutter/.packages
+sports-tv-app-flutter/.pub-cache/
+sports-tv-app-flutter/.pub/
+sports-tv-app-flutter/pubspec.lock
