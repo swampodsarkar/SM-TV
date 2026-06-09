@@ -1479,7 +1479,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                                     setAdminStartTime(evt.startTime ? new Date(evt.startTime).toISOString().slice(0, 16) : "");
                                     setAdminType(evt.type);
                                   }} className="p-1 px-2.5 bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-400 text-[9px] font-bold border border-cyan-500/20 rounded-lg cursor-pointer transition-all">Edit</button>
-                                  <button onClick={async () => { if (!confirm("Delete?")) return; setLiveEvents(prev => { const u = prev.filter(e => e.id !== evt.id); localStorage.setItem("toffee_live_events", JSON.stringify(u)); return u; }); try { await removeEvent(evt.id); triggerToast("Deleted!"); } catch { triggerToast("Removed locally"); } }} className="p-1 px-2.5 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 text-[9px] font-bold border border-rose-500/20 rounded-lg cursor-pointer transition-all">Delete</button>
+                                  <button onClick={async () => { if (!confirm("Delete?")) return; try { await removeEvent(evt.id); setLiveEvents(prev => { const u = prev.filter(e => e.id !== evt.id); localStorage.setItem("toffee_live_events", JSON.stringify(u)); return u; }); triggerToast("Deleted!"); } catch { triggerToast("Delete failed"); } }} className="p-1 px-2.5 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 text-[9px] font-bold border border-rose-500/20 rounded-lg cursor-pointer transition-all">Delete</button>
                                 </div>
                               </div>
                             ))}
@@ -1542,13 +1542,19 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                           const startTs = adminStartTime ? new Date(adminStartTime).getTime() : undefined;
                           const evtData = { type: adminType, team1: adminTeam1, team1Flag: adminTeam1Flag, team1FlagUrl: adminTeam1FlagUrl || undefined, team2: adminTeam2, team2Flag: adminTeam2Flag, team2FlagUrl: adminTeam2FlagUrl || undefined, score1: adminScore1 || "0", score2: adminScore2 || "0", status: adminStatus, statusText: adminStatusText || (adminStatus === "live" ? "In Progress" : "Scheduled"), tournament: adminTournament, channelIds: adminChannelIds.length > 0 ? adminChannelIds : undefined, channelId: adminChannelIds[0] || undefined, startTime: startTs };
                           if (editingEventId) {
-                            const updated: LiveEvent = { id: editingEventId, ...evtData } as LiveEvent;
-                            setLiveEvents(prev => { const u = prev.map(e => e.id === editingEventId ? updated : e); localStorage.setItem("toffee_live_events", JSON.stringify(u)); return u; });
-                            try { await updateEvent(editingEventId, evtData); triggerToast("Updated in Firebase!"); } catch { triggerToast("Updated locally"); }
+                            try {
+                              await updateEvent(editingEventId, evtData);
+                              const updated: LiveEvent = { id: editingEventId, ...evtData } as LiveEvent;
+                              setLiveEvents(prev => { const u = prev.map(e => e.id === editingEventId ? updated : e); localStorage.setItem("toffee_live_events", JSON.stringify(u)); return u; });
+                              triggerToast("Updated in Firebase!");
+                            } catch { triggerToast("Failed to save"); }
                           } else {
-                            const n: LiveEvent = { id: `evt-${Date.now()}`, ...evtData } as LiveEvent;
-                            setLiveEvents(prev => { const u = [...prev, n]; localStorage.setItem("toffee_live_events", JSON.stringify(u)); return u; });
-                            try { await addEvent(evtData); triggerToast("Published to Firebase!"); } catch { triggerToast("Saved locally"); }
+                            try {
+                              const firebaseKey = await addEvent(evtData);
+                              const n: LiveEvent = { id: firebaseKey!, ...evtData } as LiveEvent;
+                              setLiveEvents(prev => { const u = [...prev, n]; localStorage.setItem("toffee_live_events", JSON.stringify(u)); return u; });
+                              triggerToast("Published to Firebase!");
+                            } catch { triggerToast("Failed to save"); }
                           }
                           setEditingEventId(null);
                           setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); setAdminChannelSearch("");
