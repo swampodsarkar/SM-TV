@@ -168,6 +168,12 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
   const [pickerChannels, setPickerChannels] = useState<Channel[] | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [showAdWall, setShowAdWall] = useState(false);
+  const [adCountdown, setAdCountdown] = useState(15);
+  const [pendingChannel, setPendingChannel] = useState<Channel | null>(null);
+
+  const SMART_LINK_URL = "https://www.effectivecpmnetwork.com/ftd3iz5bc3?key=2cad8e3a81467990484f06023790b98f";
+  const AD_INTERVAL_MS = 3600000; // 1 hour
 
   // Latency Speed ping test states
   const [latencyResult, setLatencyResult] = useState<number | null>(null);
@@ -225,6 +231,20 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
     const t = setTimeout(() => setShowSplash(false), 2500);
     return () => clearTimeout(t);
   }, []);
+
+  // Ad wall countdown
+  useEffect(() => {
+    if (!showAdWall) return;
+    if (adCountdown <= 0) {
+      setShowAdWall(false);
+      localStorage.setItem("sm_ad_watch", String(Date.now()));
+      if (pendingChannel) doChangeChannel(pendingChannel);
+      setPendingChannel(null);
+      return;
+    }
+    const t = setTimeout(() => setAdCountdown(adCountdown - 1), 1000);
+    return () => clearTimeout(t);
+  }, [showAdWall, adCountdown, pendingChannel]);
 
   const triggerLatencyCheck = async () => {
     setIsTestingLatency(true);
@@ -435,6 +455,18 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
   };
 
   const changeMainChannel = (channel: Channel) => {
+    const lastAd = parseInt(localStorage.getItem("sm_ad_watch") || "0");
+    if (Date.now() - lastAd > AD_INTERVAL_MS) {
+      setPendingChannel(channel);
+      setShowAdWall(true);
+      setAdCountdown(15);
+      window.open(SMART_LINK_URL, "_blank");
+    } else {
+      doChangeChannel(channel);
+    }
+  };
+
+  const doChangeChannel = (channel: Channel) => {
     setSelectedChannel(channel);
     addToHistory(channel.id);
     scrollToActiveChannel(channel.id);
@@ -678,6 +710,24 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
           ))}
         </div>
       </div>
+
+      {/* Ad Wall Overlay */}
+      {showAdWall && (
+        <div className="fixed inset-0 z-[99] bg-[#0a0e1a]/95 flex flex-col items-center justify-center gap-6 px-6">
+          <div className="text-center">
+            <div className="text-5xl mb-4">📺</div>
+            <h2 className="text-xl font-black text-white">Ad is Loading</h2>
+            <p className="text-xs text-slate-400 mt-2">Please wait while the ad loads...</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <svg className="animate-spin h-8 w-8 text-cyan-400" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+            <span className="text-4xl font-black text-cyan-400 tabular-nums">{adCountdown}</span>
+            <span className="text-sm text-slate-500">seconds</span>
+          </div>
+          <p className="text-[10px] text-slate-600 text-center max-w-xs">Ad has opened in a new tab. Please watch briefly, then return here.</p>
+        </div>
+      )}
+
     <div className={`min-h-screen bg-[#0a0e1a] text-slate-100 flex flex-col font-sans antialiased overflow-x-hidden ${showSplash ? 'hidden' : ''}`}>
       
       {/* Ambient glow */}
