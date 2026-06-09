@@ -1,6 +1,5 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, push, onValue, remove, get, child } from "firebase/database";
-import { getAuth, signInAnonymously } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCfwz5irJzMy1UGzVhqb4rmqL4z-jeeJzA",
@@ -15,10 +14,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const auth = getAuth(app);
-
-// Wait for anonymous auth (best-effort; if disabled in console, DB ops still proceed)
-const authReady = signInAnonymously(auth).then(() => {}).catch(() => {});
 
 export interface FirebaseEvent {
   id: string;
@@ -73,7 +68,6 @@ export function listenEvents(callback: (events: FirebaseEvent[]) => void) {
 }
 
 export async function addEvent(event: Omit<FirebaseEvent, "id" | "createdAt">) {
-  await authReady;
   const eventsRef = ref(db, "events");
   const newRef = push(eventsRef);
   await set(newRef, { ...event, createdAt: Date.now() });
@@ -81,24 +75,20 @@ export async function addEvent(event: Omit<FirebaseEvent, "id" | "createdAt">) {
 }
 
 export async function removeEvent(eventId: string) {
-  await authReady;
   await remove(ref(db, `events/${eventId}`));
 }
 
 export async function updateEvent(eventId: string, event: Partial<Omit<FirebaseEvent, "id" | "createdAt">>) {
-  await authReady;
   await set(ref(db, `events/${eventId}`), { ...event, updatedAt: Date.now() });
 }
 
 // Guest Profile
 export async function saveGuestPreferences(prefs: Partial<GuestProfile>) {
-  await authReady;
   const uid = getGuestId();
   await set(ref(db, `guests/${uid}`), { ...prefs, uid, updatedAt: Date.now() });
 }
 
 export async function getGuestProfile(): Promise<GuestProfile | null> {
-  await authReady;
   const uid = getGuestId();
   const snap = await get(child(ref(db), `guests/${uid}`));
   return snap.val();
@@ -111,11 +101,10 @@ export function listenGuestProfile(callback: (profile: GuestProfile | null) => v
 }
 
 export async function addHistoryEntry(entry: { channelId: string; channelName: string }) {
-  await authReady;
   const uid = getGuestId();
   const historyRef = ref(db, `guests/${uid}/history`);
   const newRef = push(historyRef);
   await set(newRef, { ...entry, watchedAt: Date.now() });
 }
 
-export { db, auth };
+export { db };
