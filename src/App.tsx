@@ -303,12 +303,6 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
       }
 
       setChannels(data);
-      
-      const currentStillExists = selectedChannel && data.find(c => c.id === selectedChannel.id);
-      if (data.length > 0 && !currentStillExists) {
-        const firstBangla = data.find(c => c.group.toLowerCase().includes("bangla"));
-        setSelectedChannel(firstBangla || data[0]);
-      }
     } catch (err: any) {
       console.error("Failed to load channel elements:", err);
       setErrorStatus(t(appLang, "live.error"));
