@@ -33,6 +33,8 @@ const SLEEP_OPTIONS = [
   { label: "60 min", minutes: 60 },
 ];
 
+const _isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 export default function VideoPlayer({
   channel, channels = [], recentChannelIds = [],
   onPrevChannel, onNextChannel, onChannelSelect,
@@ -44,8 +46,9 @@ export default function VideoPlayer({
   const hlsRef = useRef<Hls | null>(null);
   const watchdogRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
-  const bufferPollRef = useRef<NodeJS.Timeout | null>(null);
+  const bufferPollRef = useRef<number | null>(null);
   const sleepTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = useRef(_isMobile);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,25 +106,31 @@ export default function VideoPlayer({
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [isPlaying]);
 
-  // Buffer level polling
+  // Buffer level polling — requestAnimationFrame for mobile efficiency
   useEffect(() => {
     if (!isPlaying || !videoRef.current) {
       setBufferLevel(0);
       return;
     }
-    const poll = setInterval(() => {
-      const v = videoRef.current;
-      if (v && v.buffered.length > 0) {
-        const end = v.buffered.end(v.buffered.length - 1);
-        const dur = v.duration || 1;
-        setBufferLevel(Math.min(end / dur, 1));
+    let rafId: number;
+    let lastUpdate = 0;
+    const poll = (time: number) => {
+      if (time - lastUpdate >= 1000) {
+        lastUpdate = time;
+        const v = videoRef.current;
+        if (v && v.buffered.length > 0) {
+          const end = v.buffered.end(v.buffered.length - 1);
+          const dur = v.duration || 1;
+          setBufferLevel(Math.min(end / dur, 1));
+        }
       }
-    }, 500);
-    bufferPollRef.current = poll;
-    return () => clearInterval(poll);
+      rafId = requestAnimationFrame(poll);
+    };
+    rafId = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(rafId);
   }, [isPlaying, channel]);
 
-  // Sleep timer countdown
+  // Sleep timer countdown — use rAF throttled for mobile efficiency
   useEffect(() => {
     if (sleepTimerMinutes <= 0) {
       if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
@@ -130,17 +139,24 @@ export default function VideoPlayer({
     }
     const endMs = Date.now() + sleepTimerMinutes * 60 * 1000;
     setSleepTimerRemaining(sleepTimerMinutes * 60);
-    const tick = setInterval(() => {
-      const left = Math.max(0, Math.round((endMs - Date.now()) / 1000));
-      setSleepTimerRemaining(left);
-      if (left <= 0) {
-        clearInterval(tick);
-        if (videoRef.current) { videoRef.current.pause(); setIsPlaying(false); }
-        setToastMessage("Sleep timer ended");
-        setTimeout(() => setToastMessage(null), 2500);
+    let rafId: number;
+    let lastTick = 0;
+    const tick = (time: number) => {
+      if (time - lastTick >= 1000) {
+        lastTick = time;
+        const left = Math.max(0, Math.round((endMs - Date.now()) / 1000));
+        setSleepTimerRemaining(left);
+        if (left <= 0) {
+          if (videoRef.current) { videoRef.current.pause(); setIsPlaying(false); }
+          setToastMessage("Sleep timer ended");
+          setTimeout(() => setToastMessage(null), 2500);
+          return;
+        }
       }
-    }, 1000);
-    return () => clearInterval(tick);
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [sleepTimerMinutes]);
 
   // Rotation
@@ -190,23 +206,29 @@ export default function VideoPlayer({
     const streamUrl = ch.url;
     setIsLoading(true);
     startWatchdog();
-    const bufferSizeMB = bufferMode === "low" ? 5 : bufferMode === "high" ? 40 : 20;
+    const mobile = isMobile.current;
+    const bufferSizeMB = bufferMode === "low" ? (mobile ? 3 : 5) : bufferMode === "high" ? (mobile ? 20 : 40) : (mobile ? 10 : 20);
     const maxRetryCount = bufferMode === "low" ? 0 : bufferMode === "high" ? 3 : 1;
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (Hls.isSupported() && playerEngine !== "VLC") {
       const hls = new Hls({
-        enableWorker: !isMobile,
+        enableWorker: !mobile,
         maxBufferSize: bufferSizeMB * 1024 * 1024,
         lowLatencyMode: false,
-        manifestLoadingTimeOut: isMobile ? 20000 : 10000,
-        manifestLoadingMaxRetry: isMobile ? 3 : maxRetryCount,
+        manifestLoadingTimeOut: mobile ? 20000 : 10000,
+        manifestLoadingMaxRetry: mobile ? 3 : maxRetryCount,
         manifestLoadingRetryDelay: 1000,
         startLevel: 0,
-        maxBufferLength: isMobile ? 10 : 30,
-        maxMaxBufferLength: isMobile ? 30 : 60,
-        abrEwmaDefaultEstimate: isMobile ? 200000 : 500000,
+        maxBufferLength: mobile ? 10 : 30,
+        maxMaxBufferLength: mobile ? 30 : 60,
+        backbufferLength: mobile ? 30 : 90,
+        liveDurationInfinity: false,
+        liveSyncDurationCount: mobile ? 3 : 5,
+        liveMaxLatencyDurationCount: mobile ? 6 : 10,
+        abrEwmaDefaultEstimate: mobile ? 200000 : 500000,
         abrBandWidthUpFactor: 0.5,
         abrBandWidthDownFactor: 0.4,
+        abrEwmaFastVoD: mobile ? 2 : 3,
+        abrEwmaSlowVoD: mobile ? 5 : 7,
       });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
@@ -373,7 +395,7 @@ export default function VideoPlayer({
     <div id="video-wrapper" className="flex flex-col w-full relative">
       <div id="player-container" className="relative group bg-black aspect-video w-full rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-slate-900">
         <div className="absolute inset-0 bg-black pointer-events-none z-10 transition-opacity duration-200" style={{ opacity: Math.max(0, 1 - brightness) }} />
-        <video ref={videoRef} className={`w-full h-full transition-all duration-300 ${aspectRatio === "contain" ? "object-contain" : aspectRatio === "cover" ? "object-cover" : "object-fill"}`} style={{ filter: `brightness(${brightness})` }} onClick={isLocked ? undefined : togglePlay} playsInline />
+        <video ref={videoRef} className={`w-full h-full transition-all duration-300 ${aspectRatio === "contain" ? "object-contain" : aspectRatio === "cover" ? "object-cover" : "object-fill"}`} style={{ filter: `brightness(${brightness})` }} onClick={isLocked ? undefined : togglePlay} playsInline preload="none" muted={isMuted} />
 
         {/* Lock overlay when locked */}
         {isLocked && (
@@ -452,7 +474,7 @@ export default function VideoPlayer({
         {!isLocked && (
           <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/85 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <div className="flex items-center gap-3">
-              {channel.logo && <img src={channel.logo} alt={channel.name} referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} className="h-8 w-8 object-contain rounded bg-white/10 p-1" />}
+              {channel.logo && <img src={channel.logo} alt={channel.name} referrerPolicy="no-referrer" loading="lazy" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} className="h-8 w-8 object-contain rounded bg-white/10 p-1" />}
               <div>
                 <h4 className="text-white text-sm font-semibold drop-shadow-md">{channel.name}</h4>
                 <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] rounded border border-cyan-500/30">{channel.group}</span>
@@ -579,7 +601,7 @@ export default function VideoPlayer({
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {recentChannels.map((ch) => (
                     <button key={ch.id} onClick={() => handleDrawerChannelClick(ch)} className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-slate-800/60 hover:bg-cyan-500/20 rounded-xl border border-slate-700/50 text-xs text-slate-300 hover:text-cyan-400 transition-all cursor-pointer">
-                      {ch.logo && <img src={ch.logo} alt="" className="h-5 w-5 object-contain rounded" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />}
+                      {ch.logo && <img src={ch.logo} alt="" loading="lazy" className="h-5 w-5 object-contain rounded" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />}
                       <span className="font-medium whitespace-nowrap">{ch.name}</span>
                     </button>
                   ))}
@@ -659,7 +681,7 @@ export default function VideoPlayer({
       <div id="player-details" className="mt-3 p-4 bg-slate-900/80 backdrop-blur-md border border-slate-850 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-lg">
         <div className="flex items-start gap-3">
           <div className="h-11 w-11 flex-shrink-0 bg-slate-950/65 rounded-lg border border-slate-805 flex items-center justify-center overflow-hidden">
-            {channel.logo ? <img src={channel.logo} alt={channel.name} referrerPolicy="no-referrer" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} className="h-10 w-10 object-contain p-1" /> : <Tv className="h-5 w-5 text-cyan-400/40" />}
+            {channel.logo ? <img src={channel.logo} alt={channel.name} referrerPolicy="no-referrer" loading="lazy" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} className="h-10 w-10 object-contain p-1" /> : <Tv className="h-5 w-5 text-cyan-400/40" />}
           </div>
           <div className="text-left">
             <h3 className="font-bold text-slate-100 text-base">{channel.name}</h3>

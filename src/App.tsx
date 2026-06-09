@@ -50,7 +50,7 @@ function CountdownDisplay({ startTime }: { startTime?: number }) {
 
 function FlagImg({ url, fallback }: { url?: string; fallback: string }) {
   if (!url) return <span className="text-2xl">{fallback || "🏳️"}</span>;
-  return <><img src={url} alt="" className="h-8 w-8 rounded-full object-cover border border-slate-700" onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove('hidden') }} /><span className="text-2xl hidden">{fallback || "🏳️"}</span></>;
+  return <><img src={url} alt="" loading="lazy" className="h-8 w-8 rounded-full object-cover border border-slate-700" onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement)?.classList.remove('hidden') }} /><span className="text-2xl hidden">{fallback || "🏳️"}</span></>;
 }
 
 export default function App() {
@@ -1030,7 +1030,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                       >
                         <div className="h-10 w-10 bg-slate-900/50 rounded-xl border border-slate-700/30 flex items-center justify-center overflow-hidden mb-2">
                           {chan.logo ? (
-                            <img src={chan.logo} alt={chan.name} referrerPolicy="no-referrer"
+                            <img src={chan.logo} alt={chan.name} referrerPolicy="no-referrer" loading="lazy"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               className="h-8 w-8 object-contain"
                             />
@@ -1246,6 +1246,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                           id={`channel-row-${chan.id}`}
                           onMouseEnter={() => handleChannelHoverEnter(`row-${chan.id}`)}
                           onMouseLeave={handleChannelHoverLeave}
+                          style={{ contentVisibility: "auto" }}
                           className={`flex items-center justify-between p-2.5 rounded-2xl transition-all leading-snug border cursor-pointer relative group ${
                             (isSelected && !multiScreenActive) || isSelectedInMultiIndex
                               ? "bg-slate-900 border-cyan-500 text-white shadow-md"
@@ -1276,6 +1277,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                                     src={chan.logo}
                                     alt={chan.name}
                                     referrerPolicy="no-referrer"
+                                    loading="lazy"
                                     onError={(e) => {
                                       e.currentTarget.style.display = "none";
                                       const pb = e.currentTarget.nextElementSibling;
@@ -1412,6 +1414,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                                   <img 
                                     src={targetC.logo} 
                                     alt={targetC.name} 
+                                    loading="lazy"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none';
                                       const pb = e.currentTarget.nextElementSibling;
@@ -1690,7 +1693,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                               <div key={`ph-${idx}`} onClick={() => { changeMainChannel(chan); setActiveTab("livetv"); }}
                                 className="flex items-center gap-3 p-2.5 bg-slate-950/40 rounded-xl border border-slate-800/30 cursor-pointer hover:border-cyan-500/30 transition-all">
                                 <div className="h-8 w-8 bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                                  {chan.logo ? <img src={chan.logo} alt="" className="h-7 w-7 object-contain" onError={(e) => { e.currentTarget.style.display = 'none' }} /> : <Tv className="h-4 w-4 text-slate-600" />}
+                                  {chan.logo ? <img src={chan.logo} alt="" loading="lazy" className="h-7 w-7 object-contain" onError={(e) => { e.currentTarget.style.display = 'none' }} /> : <Tv className="h-4 w-4 text-slate-600" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-bold text-slate-200 truncate">{chan.name}</p>
