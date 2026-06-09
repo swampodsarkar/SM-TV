@@ -205,9 +205,6 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
       const storedEvents = localStorage.getItem("toffee_live_events");
       if (storedEvents) {
         setLiveEvents(JSON.parse(storedEvents));
-      } else {
-        setLiveEvents(DEFAULT_EVENTS);
-        localStorage.setItem("toffee_live_events", JSON.stringify(DEFAULT_EVENTS));
       }
     } catch (e) {
       console.error("Local storage lookup failed", e);
@@ -222,9 +219,8 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
   // Firebase events sync
   useEffect(() => {
     const unsub = listenEvents((fireEvents) => {
-      if (fireEvents.length > 0) {
-        setLiveEvents(fireEvents);
-      }
+      setLiveEvents(fireEvents);
+      localStorage.setItem("toffee_live_events", JSON.stringify(fireEvents));
     });
     return () => unsub();
   }, []);
@@ -282,10 +278,24 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
     setErrorStatus(null);
     try {
       let data: Channel[] = [];
-      const res = await fetch("/api/channels");
-      if (res.ok) {
-        const json = await res.json();
-        data = Array.isArray(json) ? json : json.channels || [];
+      try {
+        const res = await fetch("/api/channels");
+        if (res.ok) {
+          const json = await res.json();
+          data = Array.isArray(json) ? json : json.channels || [];
+        }
+      } catch {}
+      
+      // Fallback: fetch from backup M3U URL if server API failed or returned no channels
+      if (data.length === 0 && backupPlaylistUrl) {
+        try {
+          const m3uRes = await fetch(backupPlaylistUrl);
+          if (m3uRes.ok) {
+            const m3uText = await m3uRes.text();
+            const m3uParsed = parseM3UClientSide(m3uText);
+            if (m3uParsed.length > 0) data = m3uParsed;
+          }
+        } catch {}
       }
 
       // If custom M3U text is pasted, parse it client-side and push to lists
