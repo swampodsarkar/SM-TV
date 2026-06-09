@@ -232,21 +232,22 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
     return () => clearTimeout(t);
   }, []);
 
-  // Ad wall countdown — pauses if app goes background
+  // Ad wall countdown
   useEffect(() => {
     if (!showAdWall) return;
     if (adCountdown <= 0) {
       setShowAdWall(false);
       localStorage.setItem("sm_ad_watch", String(Date.now()));
-      if (pendingChannel) doChangeChannel(pendingChannel);
-      setPendingChannel(null);
+      if (pendingChannel) {
+        const ch = pendingChannel;
+        setPendingChannel(null);
+        doChangeChannel(ch);
+      }
       return;
     }
-    const t = setTimeout(() => {
-      if (!document.hidden) setAdCountdown(adCountdown - 1);
-    }, 1000);
+    const t = setTimeout(() => setAdCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [showAdWall, adCountdown, pendingChannel]);
+  }, [showAdWall, adCountdown]);
 
   const triggerLatencyCheck = async () => {
     setIsTestingLatency(true);
