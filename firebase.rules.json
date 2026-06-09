@@ -1,20 +1,17 @@
 // Copy these rules to Firebase Console → Realtime Database → Rules
+// Anonymous Auth in Firebase Console must be ENABLED (Authentication → Sign-in method → Anonymous → Enable)
+// If disabled, the app falls back to open access (rules below allow public read/write for events)
 {
   "rules": {
-    // Only authenticated users can access the database
-    ".read": "auth != null",
-    ".write": "auth != null",
+    ".read": true,
+    ".write": true,
     "events": {
-      // Anyone can read events (authenticated)
-      ".read": "auth != null",
-      // Only the admin can write events via the app
-      ".write": "auth != null"
+      ".indexOn": ["status", "type", "startTime"]
     },
     "guests": {
-      // Each guest can only read/write their own data
       "$guestId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth === null || auth.uid === $guestId",
+        ".write": "auth === null || auth.uid === $guestId"
       }
     }
   }

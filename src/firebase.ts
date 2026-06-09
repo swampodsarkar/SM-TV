@@ -17,8 +17,8 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-// Wait for anonymous auth before any DB operation (required by security rules)
-const authReady = signInAnonymously(auth).then(() => {});
+// Wait for anonymous auth (best-effort; if disabled in console, DB ops still proceed)
+const authReady = signInAnonymously(auth).then(() => {}).catch(() => {});
 
 export interface FirebaseEvent {
   id: string;
