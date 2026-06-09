@@ -192,8 +192,22 @@ export default function VideoPlayer({
     startWatchdog();
     const bufferSizeMB = bufferMode === "low" ? 5 : bufferMode === "high" ? 40 : 20;
     const maxRetryCount = bufferMode === "low" ? 0 : bufferMode === "high" ? 3 : 1;
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (Hls.isSupported() && playerEngine !== "VLC") {
-      const hls = new Hls({ enableWorker: true, maxBufferSize: bufferSizeMB * 1024 * 1024, lowLatencyMode: bufferMode === "low", manifestLoadingTimeOut: 3000, manifestLoadingMaxRetry: maxRetryCount, startLevel: 0 });
+      const hls = new Hls({
+        enableWorker: !isMobile,
+        maxBufferSize: bufferSizeMB * 1024 * 1024,
+        lowLatencyMode: false,
+        manifestLoadingTimeOut: isMobile ? 20000 : 10000,
+        manifestLoadingMaxRetry: isMobile ? 3 : maxRetryCount,
+        manifestLoadingRetryDelay: 1000,
+        startLevel: 0,
+        maxBufferLength: isMobile ? 10 : 30,
+        maxMaxBufferLength: isMobile ? 30 : 60,
+        abrEwmaDefaultEstimate: isMobile ? 200000 : 500000,
+        abrBandWidthUpFactor: 0.5,
+        abrBandWidthDownFactor: 0.4,
+      });
       hlsRef.current = hls;
       hls.loadSource(streamUrl);
       hls.attachMedia(video);
