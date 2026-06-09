@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback, Suspense } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Channel, LiveEvent } from "./types";
 import { Language, t } from "./translations";
@@ -10,13 +10,12 @@ import {
   Trophy, Calendar, Globe, Menu, Bell, User, Clock, Zap, Eye, TrendingUp
 } from "./icons";
 import { listenEvents, addEvent, removeEvent, updateEvent, FirebaseEvent } from "./firebase";
-const VideoPlayer = React.lazy(() => import("./components/VideoPlayer"));
-
-const HomeTab = React.lazy(() => import("./components/HomeTab"));
-const LiveTVTab = React.lazy(() => import("./components/LiveTVTab"));
-const HistoryTab = React.lazy(() => import("./components/HistoryTab"));
-const ProfileTab = React.lazy(() => import("./components/ProfileTab"));
-const SettingsTab = React.lazy(() => import("./components/SettingsTab"));
+import VideoPlayer from "./components/VideoPlayer";
+import HomeTab from "./components/HomeTab";
+import LiveTVTab from "./components/LiveTVTab";
+import HistoryTab from "./components/HistoryTab";
+import ProfileTab from "./components/ProfileTab";
+import SettingsTab from "./components/SettingsTab";
 
 const DEFAULT_EVENTS: LiveEvent[] = [
   { id: "fwc-1", type: "football", team1: "Brazil", team1Flag: "🇧🇷", team2: "Argentina", team2Flag: "🇦🇷", score1: "1", score2: "0", status: "live", statusText: "32' First Half", tournament: "FIFA World Cup 2026", channelId: "footballworldcup2026-2" },
@@ -882,37 +881,27 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
           
           {/* ===== HOME TAB ===== */}
           {activeTab === "home" && (
-            <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="h-8 w-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" /></div>}>
-              <HomeTab {...tabProps} />
-            </Suspense>
+            <HomeTab {...tabProps} />
           )}
 
           {/* ===== LIVE TV TAB / SPORTS CHANNELS ===== */}
           {activeTab === "livetv" && (
-            <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="h-8 w-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" /></div>}>
-              <LiveTVTab {...tabProps} />
-            </Suspense>
+            <LiveTVTab {...tabProps} />
           )}
 
             {/* VIEW 3: Dedicated History Timelines tab (tab: "history") */}
             {activeTab === "history" && (
-              <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="h-8 w-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" /></div>}>
-                <HistoryTab {...tabProps} />
-              </Suspense>
+              <HistoryTab {...tabProps} />
             )}
 
             {/* VIEW 5: Profile tab — login first, then guest profile or admin panel */}
             {activeTab === "profile" && (
-              <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="h-8 w-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" /></div>}>
-                <ProfileTab {...tabProps} />
-              </Suspense>
+              <ProfileTab {...tabProps} />
             )}
 
             {/* VIEW 6: Multi-utility Advanced Settings (tab: "settings") */}
             {activeTab === "settings" && (
-              <Suspense fallback={<div className="flex items-center justify-center h-40"><div className="h-8 w-8 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" /></div>}>
-                <SettingsTab {...tabProps} />
-              </Suspense>
+              <SettingsTab {...tabProps} />
             )}
           </AnimatePresence>
         </div>
@@ -961,15 +950,13 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                 </div>
                 
                 <div className="pointer-events-none scale-103 h-full w-full">
-                  <Suspense fallback={<div className="w-full h-full bg-black/50 rounded-2xl" />}>
-                    <VideoPlayer
-                      channel={selectedChannel}
-                      autoPlay={true}
-                      bufferMode="low"
-                      playerEngine={playerEngine}
-                      language={appLang}
-                    />
-                  </Suspense>
+                  <VideoPlayer
+                    channel={selectedChannel}
+                    autoPlay={true}
+                    bufferMode="low"
+                    playerEngine={playerEngine}
+                    language={appLang}
+                  />
                 </div>
               </div>
             </motion.div>
