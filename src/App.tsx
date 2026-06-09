@@ -806,6 +806,8 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4 px-3 pt-3"
             >
+              {/* Adsterra Native Banner - Home */}
+              <div id="container-746233a5c9d232e44637fa5f647e4c59"></div>
               {/* Sports Categories */}
               <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
                 {sportsCategories.map((cat) => (
@@ -1074,6 +1076,9 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                 {/* Right side: Channels listing directory */}
                 <section className={`flex flex-col gap-4 bg-slate-900/40 backdrop-blur-xl border border-slate-900 rounded-3xl p-4 shadow-xl min-h-[500px] ${selectedChannel ? "lg:w-2/5" : "w-full"}`}>
                   
+                  {/* Adsterra Native Banner - Channel List */}
+                  <div id="container-746233a5c9d232e44637fa5f647e4c59"></div>
+
                   <div className="flex flex-col gap-3 pb-3 border-b border-slate-850/65">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-sm tracking-wide text-left flex items-center gap-1.5 text-white">
