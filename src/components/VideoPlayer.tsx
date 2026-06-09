@@ -80,6 +80,169 @@ export default function VideoPlayer({
   const [isRotated, setIsRotated] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
 
+  // New feature states
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [localBufferMode, setLocalBufferMode] = useState<"low" | "medium" | "high">(bufferMode);
+  const [autoReconnect, setAutoReconnect] = useState(true);
+  const [showSubtitleMenu, setShowSubtitleMenu] = useState(false);
+  const [subtitleTrack, setSubtitleTrack] = useState<number | null>(null);
+  const [subtitleTracks, setSubtitleTracks] = useState<TextTrack[]>([]);
+  const [gestureEnabled, setGestureEnabled] = useState(true);
+  const [isGestureSeeking, setIsGestureSeeking] = useState(false);
+  const [gestureIndicator, setGestureIndicator] = useState<string | null>(null);
+  const [watchdogActive, setWatchdogActive] = useState(false);
+  const [showExtraSettings, setShowExtraSettings] = useState(false);
+
+  // Touch gesture refs
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchStartVolume = useRef(volume);
+  const touchStartTime = useRef(0);
+  const gestureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = parseFloat(e.target.value);
+    setCurrentTime(v);
+    if (videoRef.current) {
+      videoRef.current.currentTime = v;
+    }
+  };
+
+  const handleSeekStart = () => setIsSeeking(true);
+  const handleSeekEnd = () => setIsSeeking(false);
+
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackRate(speed);
+    setShowSpeedMenu(false);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+    setToastMessage(`Speed: ${speed}x`);
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const toggleAutoReconnect = () => {
+    setAutoReconnect(!autoReconnect);
+    setToastMessage(autoReconnect ? "Auto-reconnect off" : "Auto-reconnect on");
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const handleBufferChange = (mode: "low" | "medium" | "high") => {
+    setLocalBufferMode(mode);
+    setShowExtraSettings(false);
+    setToastMessage(`Buffer: ${mode}`);
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const toggleSubtitleMenu = () => {
+    if (videoRef.current) {
+      const tracks = Array.from(videoRef.current.textTracks);
+      setSubtitleTracks(tracks);
+    }
+    setShowSubtitleMenu(!showSubtitleMenu);
+  };
+
+  const selectSubtitle = (idx: number | null) => {
+    setSubtitleTrack(idx);
+    setShowSubtitleMenu(false);
+    if (videoRef.current) {
+      const tracks = videoRef.current.textTracks;
+      for (let i = 0; i < tracks.length; i++) {
+        tracks[i].mode = i === idx ? "showing" : "hidden";
+      }
+    }
+    setToastMessage(idx === null ? "Subtitles off" : "Subtitles on");
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  // Touch gesture handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!gestureEnabled) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    touchStartVolume.current = volume;
+    touchStartTime.current = currentTime;
+    setIsGestureSeeking(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!gestureEnabled || isLocked) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    if (absDx < 10 && absDy < 10) return;
+
+    if (absDx > absDy) {
+      // Horizontal swipe = seek
+      setIsGestureSeeking(true);
+      const seekDelta = (dx / window.innerWidth) * (duration || 120);
+      const newTime = Math.max(0, Math.min(touchStartTime.current + seekDelta, duration || 120));
+      setCurrentTime(newTime);
+      setGestureIndicator(`${seekDelta > 0 ? "+" : ""}${formatTime(seekDelta)}`);
+      if (gestureTimeoutRef.current) clearTimeout(gestureTimeoutRef.current);
+      gestureTimeoutRef.current = setTimeout(() => setGestureIndicator(null), 1500);
+    } else {
+      // Vertical swipe = volume
+      const volDelta = -dy / 200;
+      const newVol = Math.max(0, Math.min(1, touchStartVolume.current + volDelta));
+      setVolume(newVol);
+      setIsMuted(newVol === 0);
+      if (videoRef.current) {
+        videoRef.current.volume = newVol;
+        videoRef.current.muted = newVol === 0;
+      }
+      setGestureIndicator(`${Math.round(newVol * 100)}%`);
+      if (gestureTimeoutRef.current) clearTimeout(gestureTimeoutRef.current);
+      gestureTimeoutRef.current = setTimeout(() => setGestureIndicator(null), 1500);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isGestureSeeking && videoRef.current) {
+      videoRef.current.currentTime = currentTime;
+    }
+    setIsGestureSeeking(false);
+  };
+
+  // Watchdog status
+  useEffect(() => {
+    setWatchdogActive(isLoading && !isPlaying);
+  }, [isLoading, isPlaying]);
+
+  // Time update listener
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onTimeUpdate = () => {
+      if (!isSeeking) {
+        setCurrentTime(video.currentTime);
+        setDuration(video.duration || 0);
+      }
+    };
+    const onLoadedMeta = () => {
+      setDuration(video.duration || 0);
+    };
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("loadedmetadata", onLoadedMeta);
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("loadedmetadata", onLoadedMeta);
+    };
+  }, [isSeeking]);
+
   // Recent channels resolved from ids
   const recentChannels = useMemo(() => {
     return recentChannelIds
@@ -395,7 +558,7 @@ export default function VideoPlayer({
     <div id="video-wrapper" className="flex flex-col w-full relative">
       <div id="player-container" className="relative group bg-black aspect-video w-full rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-slate-900">
         <div className="absolute inset-0 bg-black pointer-events-none z-10 transition-opacity duration-200" style={{ opacity: Math.max(0, 1 - brightness) }} />
-        <video ref={videoRef} className={`w-full h-full transition-all duration-300 ${aspectRatio === "contain" ? "object-contain" : aspectRatio === "cover" ? "object-cover" : "object-fill"}`} style={{ filter: `brightness(${brightness})` }} onClick={isLocked ? undefined : togglePlay} playsInline preload="none" muted={isMuted} />
+        <video ref={videoRef} className={`w-full h-full transition-all duration-300 ${aspectRatio === "contain" ? "object-contain" : aspectRatio === "cover" ? "object-cover" : "object-fill"}`} style={{ filter: `brightness(${brightness})` }} onClick={isLocked ? undefined : togglePlay} playsInline preload="none" muted={isMuted} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} />
 
         {/* Lock overlay when locked */}
         {isLocked && (
@@ -502,9 +665,36 @@ export default function VideoPlayer({
           </div>
         )}
 
+        {/* Gesture indicator overlay */}
+        {gestureIndicator && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+            <div className="bg-slate-950/80 backdrop-blur-sm border border-slate-800 text-cyan-400 font-bold font-mono text-xl px-6 py-3 rounded-2xl shadow-2xl animate-fade-in">
+              {gestureIndicator}
+            </div>
+          </div>
+        )}
+
         {/* Bottom controls (hidden when locked) */}
         {!isLocked && (
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+            {/* Seek bar */}
+            <div className="w-full flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 font-mono min-w-[32px]">{formatTime(currentTime)}</span>
+              <input
+                type="range"
+                min={0}
+                max={duration || 1}
+                step={0.1}
+                value={currentTime}
+                onMouseDown={handleSeekStart}
+                onMouseUp={handleSeekEnd}
+                onTouchStart={handleSeekStart}
+                onTouchEnd={handleSeekEnd}
+                onChange={handleSeek}
+                className="flex-1 h-1 bg-slate-700/50 rounded-full appearance-none cursor-pointer accent-cyan-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-400"
+              />
+              <span className="text-[10px] text-slate-400 font-mono min-w-[32px]">{formatTime(duration)}</span>
+            </div>
             {/* Buffer indicator bar */}
             <div className="w-full h-0.5 bg-slate-700/50 rounded-full overflow-hidden">
               <div className="h-full bg-cyan-500/60 rounded-full transition-all duration-300" style={{ width: `${bufferLevel * 100}%` }} />
@@ -559,10 +749,21 @@ export default function VideoPlayer({
               </div>
             </div>
             {/* Second row: extra controls */}
-            <div className="flex items-center justify-between w-full px-1 opacity-80 hover:opacity-100 transition-opacity">
+            <div className="flex items-center justify-between w-full px-1 opacity-80 hover:opacity-100 transition-opacity flex-wrap gap-1">
               <div className="flex items-center gap-3">
                 {/* Share */}
                 <button onClick={handleShare} className="text-[10px] text-slate-400 hover:text-cyan-400 transition-colors flex items-center gap-1 cursor-pointer"><Share2 className="h-3 w-3" /> Share</button>
+                {/* Playback speed */}
+                <div className="relative">
+                  <button onClick={() => setShowSpeedMenu(!showSpeedMenu)} className="text-[10px] text-slate-400 hover:text-cyan-400 transition-colors flex items-center gap-1 cursor-pointer"><Sliders className="h-3 w-3" /> {playbackRate}x</button>
+                  {showSpeedMenu && (
+                    <div className="absolute bottom-6 left-0 bg-slate-950 border border-slate-850 rounded-xl p-1 shadow-2xl z-50 flex flex-col gap-0.5 min-w-16">
+                      {SPEED_OPTIONS.map((s) => (
+                        <button key={s} onClick={() => handleSpeedChange(s)} className={`text-left px-2.5 py-1.5 text-[10px] font-mono rounded hover:bg-cyan-500 hover:text-slate-950 ${playbackRate === s ? "text-cyan-400 font-bold" : "text-slate-400"}`}>{s}x</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {/* Sleep timer */}
                 <div className="relative">
                   <button onClick={() => setShowSleepTimerMenu(!showSleepTimerMenu)} className={`text-[10px] flex items-center gap-1 cursor-pointer transition-colors ${sleepTimerMinutes > 0 ? "text-cyan-400" : "text-slate-400 hover:text-cyan-400"}`}><Timer className="h-3 w-3" /> {sleepTimerMinutes > 0 ? `${sleepTimerMinutes}m` : "Sleep"}</button>
@@ -574,12 +775,64 @@ export default function VideoPlayer({
                     </div>
                   )}
                 </div>
+                {/* Extra settings (buffer, auto-reconnect, subtitle, gesture) */}
+                <div className="relative">
+                  <button onClick={() => setShowExtraSettings(!showExtraSettings)} className="text-[10px] text-slate-400 hover:text-cyan-400 transition-colors flex items-center gap-1 cursor-pointer"><Sliders className="h-3 w-3" /> More</button>
+                  {showExtraSettings && (
+                    <div className="absolute bottom-6 left-0 bg-slate-950 border border-slate-850 rounded-xl p-1.5 shadow-2xl z-50 flex flex-col gap-1 min-w-32">
+                      <span className="text-[8px] text-slate-600 uppercase font-bold tracking-wider px-2 pt-1">Buffer</span>
+                      <div className="flex gap-1 px-2">
+                        {(["low", "medium", "high"] as const).map((m) => (
+                          <button key={m} onClick={() => handleBufferChange(m)} className={`text-[9px] px-2 py-1 rounded font-mono ${localBufferMode === m ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-800 text-slate-400 hover:bg-slate-700"}`}>{m}</button>
+                        ))}
+                      </div>
+                      <div className="h-px bg-slate-800 mx-2" />
+                      <button onClick={toggleAutoReconnect} className={`text-[10px] px-2 py-1.5 rounded flex items-center gap-2 ${autoReconnect ? "text-cyan-400" : "text-slate-500"}`}>
+                        <div className={`h-3 w-5 rounded-full transition-colors ${autoReconnect ? "bg-cyan-500" : "bg-slate-700"} relative`}>
+                          <div className={`h-2.5 w-2.5 rounded-full bg-white absolute top-0.5 transition-transform ${autoReconnect ? "translate-x-2.5" : "translate-x-0.5"}`} />
+                        </div>
+                        Auto-reconnect
+                      </button>
+                      <button onClick={toggleSubtitleMenu} className="text-[10px] px-2 py-1.5 rounded flex items-center gap-2 text-slate-400 hover:text-cyan-400">
+                        <span className="text-xs">CC</span>
+                        {subtitleTrack !== null ? "Subtitles on" : "Subtitles"}
+                      </button>
+                      {showSubtitleMenu && (
+                        <div className="px-2 pb-1">
+                          <button onClick={() => selectSubtitle(null)} className={`text-[9px] px-2 py-1 rounded w-full text-left ${subtitleTrack === null ? "text-cyan-400" : "text-slate-400 hover:text-slate-300"}`}>Off</button>
+                          {subtitleTracks.map((_, idx) => (
+                            <button key={idx} onClick={() => selectSubtitle(idx)} className={`text-[9px] px-2 py-1 rounded w-full text-left ${subtitleTrack === idx ? "text-cyan-400" : "text-slate-400 hover:text-slate-300"}`}>Track {idx + 1}</button>
+                          ))}
+                          {subtitleTracks.length === 0 && <span className="text-[8px] text-slate-600 px-2">No tracks available</span>}
+                        </div>
+                      )}
+                      <div className="h-px bg-slate-800 mx-2" />
+                      <button onClick={() => { setGestureEnabled(!gestureEnabled); setShowExtraSettings(false); }} className={`text-[10px] px-2 py-1.5 rounded flex items-center gap-2 ${gestureEnabled ? "text-cyan-400" : "text-slate-500"}`}>
+                        <div className={`h-3 w-5 rounded-full transition-colors ${gestureEnabled ? "bg-cyan-500" : "bg-slate-700"} relative`}>
+                          <div className={`h-2.5 w-2.5 rounded-full bg-white absolute top-0.5 transition-transform ${gestureEnabled ? "translate-x-2.5" : "translate-x-0.5"}`} />
+                        </div>
+                        Gesture control
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Watchdog indicator */}
+                {watchdogActive && (
+                  <span className="text-[9px] text-amber-400 font-mono flex items-center gap-1 animate-pulse">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    Watchdog
+                  </span>
+                )}
                 {/* Rotation */}
                 <button onClick={toggleRotation} className="text-[10px] text-slate-400 hover:text-cyan-400 transition-colors flex items-center gap-1 cursor-pointer"><RotateCw className="h-3 w-3" /> {isRotated ? "Portrait" : "Landscape"}</button>
                 {/* Favorite */}
                 <button onClick={() => onToggleFavorite?.(channel.id)} className={`text-[10px] flex items-center gap-1 cursor-pointer transition-colors ${isFavorite ? "text-yellow-400" : "text-slate-400 hover:text-yellow-400"}`}><Star className={`h-3 w-3 ${isFavorite ? "fill-yellow-400" : ""}`} /> {isFavorite ? "Favorited" : "Favorite"}</button>
+                {/* Subtitle toggle (quick) */}
+                <button onClick={toggleSubtitleMenu} className={`text-[10px] flex items-center gap-1 cursor-pointer transition-colors ${subtitleTrack !== null ? "text-cyan-400" : "text-slate-400 hover:text-cyan-400"}`}>
+                  <span className="text-xs font-bold">CC</span>
+                </button>
               </div>
             </div>
           </div>
