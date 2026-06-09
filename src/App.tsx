@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Channel, LiveEvent } from "./types";
 import { Language, t } from "./translations";
