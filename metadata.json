@@ -1,0 +1,6 @@
+{
+  "name": "Live TV Player",
+  "description": "Premium native android TV and mobile IPTV style Live TV Launcher. Formatted for high performance, featuring automated latency tuners and responsive leanback grids with pre-moderated secure stream protection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

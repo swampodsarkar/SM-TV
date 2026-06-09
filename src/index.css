@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-150: #eef2f6;
+  --color-slate-205: #e0e6ee;
+  --color-slate-250: #d0d8e2;
+  --color-slate-350: #b0bcc8;
+  --color-slate-450: #8895a8;
+  --color-slate-505: #768498;
+  --color-slate-550: #5e7087;
+  --color-slate-605: #4a5a6e;
+  --color-slate-620: #455469;
+  --color-slate-650: #3f4e62;
+  --color-slate-705: #2b3a4e;
+  --color-slate-750: #253444;
+  --color-slate-805: #1b2838;
+  --color-slate-850: #142030;
+  --color-slate-855: #101c2a;
+  --color-slate-905: #08101e;
+  --color-rose-350: #fb7ea8;
+  --color-rose-455: #e5466f;
+  --color-rose-650: #be1e3a;
+  --color-sky-450: #38bdf8;
+  --scale-103: 1.03;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+::-webkit-scrollbar { display: none; }
+* { -ms-overflow-style: none; scrollbar-width: none; }
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+  background: #0a0e1a;
+}
+
+button:active {
+  transform: scale(0.96);
+  transition: transform 0.08s ease;
+}
+
+a, button, [role="button"] {
+  cursor: pointer;
+  user-select: none;
+}
+
+
