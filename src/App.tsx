@@ -1473,7 +1473,7 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                                     setAdminStartTime(evt.startTime ? new Date(evt.startTime).toISOString().slice(0, 16) : "");
                                     setAdminType(evt.type);
                                   }} className="p-1 px-2.5 bg-cyan-500/10 hover:bg-cyan-500/25 text-cyan-400 text-[9px] font-bold border border-cyan-500/20 rounded-lg cursor-pointer transition-all">Edit</button>
-                                  <button onClick={async () => { if (!confirm("Delete?")) return; try { await removeEvent(evt.id); triggerToast("Deleted!"); } catch { triggerToast("Delete failed"); } }} className="p-1 px-2.5 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 text-[9px] font-bold border border-rose-500/20 rounded-lg cursor-pointer transition-all">Delete</button>
+                                  <button onClick={async () => { if (!confirm("Delete?")) return; try { await removeEvent(evt.id); triggerToast("Deleted!"); } catch (e: any) { triggerToast("Delete error: " + (e?.message || "unknown")); console.error("Firebase delete error:", e); } }} className="p-1 px-2.5 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 text-[9px] font-bold border border-rose-500/20 rounded-lg cursor-pointer transition-all">Delete</button>
                                 </div>
                               </div>
                             ))}
@@ -1542,8 +1542,9 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                               await addEvent(evtData);
                             }
                             triggerToast("Saved to Firebase!");
-                          } catch {
-                            triggerToast("Firebase write failed");
+                          } catch (e: any) {
+                            triggerToast("Firebase error: " + (e?.message || "unknown"));
+                            console.error("Firebase write error:", e);
                           }
                           setEditingEventId(null);
                           setAdminTeam1(""); setAdminTeam2(""); setAdminScore1(""); setAdminScore2(""); setAdminStatusText(""); setAdminTournament(""); setAdminChannelId(""); setAdminChannelIds([]); setAdminTeam1FlagUrl(""); setAdminTeam2FlagUrl(""); setAdminStartTime(""); setAdminChannelSearch("");
