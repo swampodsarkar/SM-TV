@@ -1534,7 +1534,11 @@ const imgbbUpload = async (file: File, setUrl: (url: string) => void, setUploadi
                         <button onClick={async () => {
                           if (!adminTeam1 || !adminTeam2 || !adminTournament) { triggerToast("Fill all fields!"); return; }
                           const startTs = adminStartTime ? new Date(adminStartTime).getTime() : undefined;
-                          const evtData = { type: adminType, team1: adminTeam1, team1Flag: adminTeam1Flag, team1FlagUrl: adminTeam1FlagUrl || undefined, team2: adminTeam2, team2Flag: adminTeam2Flag, team2FlagUrl: adminTeam2FlagUrl || undefined, score1: adminScore1 || "0", score2: adminScore2 || "0", status: adminStatus, statusText: adminStatusText || (adminStatus === "live" ? "In Progress" : "Scheduled"), tournament: adminTournament, channelIds: adminChannelIds.length > 0 ? adminChannelIds : undefined, channelId: adminChannelIds[0] || undefined, startTime: startTs };
+                          const evtData: Record<string, any> = { type: adminType, team1: adminTeam1, team1Flag: adminTeam1Flag, team2: adminTeam2, team2Flag: adminTeam2Flag, score1: adminScore1 || "0", score2: adminScore2 || "0", status: adminStatus, statusText: adminStatusText || (adminStatus === "live" ? "In Progress" : "Scheduled"), tournament: adminTournament, channelIds: adminChannelIds.length > 0 ? adminChannelIds : undefined, channelId: adminChannelIds[0] || undefined, startTime: startTs };
+                          if (adminTeam1FlagUrl) evtData.team1FlagUrl = adminTeam1FlagUrl;
+                          if (adminTeam2FlagUrl) evtData.team2FlagUrl = adminTeam2FlagUrl;
+                          // Remove undefined keys (Firebase rejects them)
+                          Object.keys(evtData).forEach(k => evtData[k] === undefined && delete evtData[k]);
                           try {
                             if (editingEventId) {
                               await updateEvent(editingEventId, evtData);
