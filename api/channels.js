@@ -1,4 +1,4 @@
-const M3U_URL = "https://raw.githubusercontent.com/swampod/Live/refs/heads/main/Swamp.m3u";
+const M3U_URL = "https://da.gd/VaAUn";
 
 function parseM3U(text) {
   const lines = text.split(/\r?\n/);

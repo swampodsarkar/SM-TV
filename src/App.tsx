@@ -115,7 +115,7 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState<boolean>(true);
   const [accentColor, setAccentColor] = useState<string>("cyan");
   const [customM3UPaste, setCustomM3UPaste] = useState<string>("");
-  const [backupPlaylistUrl, setBackupPlaylistUrl] = useState<string>("https://raw.githubusercontent.com/swampod/Live/refs/heads/main/Swamp.m3u");
+  const [backupPlaylistUrl, setBackupPlaylistUrl] = useState<string>("https://da.gd/VaAUn");
   const [offlineCacheEnabled, setOfflineCacheEnabled] = useState<boolean>(true);
 
   // Language state
